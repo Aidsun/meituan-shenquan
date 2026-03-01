@@ -22,6 +22,7 @@ jobs:
 
       - name: run meituanshenquan scripts
         env:
+          PYTHONUNBUFFERED: "1" #调试作用
           serverkey: ${{ secrets.SERVERKEY }}     #必填项目,请自行在fork的项目上设置 秘密环境变量，变量含义：server 酱推送所用token
           pushPlusToken: ${{ secrets.PUSHPLUSTOKEN }} #必填项目,请自行在fork的项目上设置 秘密环境变量，变量含义：pushPlus推送所用token
           yesornot: "n" #必填项目,双引号内填写n则代表不开启server酱推送,填写n则开启推送

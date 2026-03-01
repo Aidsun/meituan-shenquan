@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-# 适配 GitHub Actions 版本，直接使用环境变量
+# GitHub Actions 适配版 + 详细推送
 
 import os
 import sys
@@ -19,7 +19,7 @@ wm_longitude = os.environ.get("wm_longitude", "104063321")
 propId = int(os.environ.get("propId", "5"))
 exchangeCoinNumber = int(os.environ.get("exchangeCoinNumber", "1800"))
 setexchangedou = int(os.environ.get("setexchangedou", "1800"))
-yesornot2 = os.environ.get("yesornot2", "n")  # 是否启用推送
+yesornot2 = os.environ.get("yesornot2", "n")
 
 # 常量
 parActivityId = "Gh1tkq-wvFU2xEP_ZPzHPQ"
@@ -32,6 +32,20 @@ head = {
     "x-requested-with": "XMLHttpRequest",
     "content-type": "application/x-www-form-urlencoded"
 }
+
+# 日志收集器
+class LogCollector:
+    def __init__(self):
+        self._buff = ""
+    def write(self, message):
+        self._buff += message
+        sys.__stdout__.write(message)  # 同时输出到控制台
+    def flush(self):
+        sys.__stdout__.flush()
+
+# 创建收集器并重定向 stdout
+log_collector = LogCollector()
+sys.stdout = log_collector
 
 def signForBeans():
     print("**开始执行签到领豆脚本:**")
@@ -60,7 +74,7 @@ def doAction():
     try:
         resp = urllib.request.urlopen(req, timeout=10)
         result = json.loads(resp.read().decode("utf-8"))
-        if result["code"] == 0:
+        if result["code"] == 0 and result["data"]["signDays"] != 0:
             print("签到成功，本周已签到" + str(result["data"]["signDays"]) + "天")
         elif result["code"] == 0 and result["data"]["signDays"] == 0:
             print("今日已签到")
@@ -160,11 +174,15 @@ def pushPlus():
         print("webhook为空，不推送")
         return
     print("**开始推送企业微信:**")
-    content = "美团领券脚本执行完成，请查看日志。"
+    # 从收集器获取所有输出
+    message = log_collector._buff if log_collector._buff else "无详细日志"
+    # 限制长度，避免超出企业微信限制（最多2048字节）
+    if len(message) > 2000:
+        message = message[:2000] + "\n...（日志过长已截断）"
     data = {
         "msgtype": "text",
         "text": {
-            "content": content
+            "content": message
         }
     }
     headers = {"Content-Type": "application/json"}
@@ -187,8 +205,7 @@ def main():
     signForBeans()
     doAction()
     myRedBeanRecords()
-    # 如果豆子够，尝试兑换（可根据需要启用）
-    # exchange()
+    # exchange()  # 可根据需要启用
     querymyProps()
     batchId = getbatchId()
     if batchId:
